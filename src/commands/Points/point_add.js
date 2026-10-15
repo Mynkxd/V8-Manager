@@ -29,7 +29,7 @@ export default {
         const points = interaction.options.getInteger('points');
 
         if (points <= 0) {
-            return interaction.editReply("❌ Points 1 ya usse zyada hone chahiye!");
+            return interaction.editReply("❌ Points must be 1 or greater!");
         }
 
         let data = loadData();
@@ -50,8 +50,8 @@ export default {
         if (userData.daily_points + points > 10) {
             const remaining = 10 - userData.daily_points;
             return interaction.editReply(
-                `⚠️ **Limit Exceeded!** Is user ko aaj sirf **10 points** mil sakte hain.\n` +
-                `Aaj mil chuke: \`${userData.daily_points}/10\` | Remaining: \`${Math.max(0, remaining)}\``
+                `⚠️ **Daily Limit Exceeded!** This user can only receive up to **10 points** per day.\n` +
+                `Given today: \`${userData.daily_points}/10\` | Remaining allowance: \`${Math.max(0, remaining)}\``
             );
         }
 
@@ -62,7 +62,7 @@ export default {
         await interaction.editReply(
             `✅ **+${points} Points** added to ${user}!\n` +
             `📊 **Weekly Total:** \`${userData.total_points}\` points\n` +
-            `📅 **Today Given:** \`${userData.daily_points}/10\``
+            `📅 **Given Today:** \`${userData.daily_points}/10\``
         );
     }
 };
