@@ -9,7 +9,7 @@ export const botConfig = {
   // - "idle"      = yellow moon
   // - "dnd"       = red do-not-disturb
   // - "invisible" = appears offline
-  presence: {
+ presence: {
     // Current online state shown on Discord.
     status: "online",
 
@@ -23,13 +23,16 @@ export const botConfig = {
     // 5 = Competing
     activities: [
       {
+        name: "On duty",
+        type: 0,
+      },
+      {
         name: "Custom Status", // required by Discord API, not shown in the client
-        state: "Team V8 IS Best in AS ",     // this is what people actually see
+        state: "Team V8 Best In AS",   // this is what people actually see
         type: 4,               // Custom
       },
     ],
   },
-
   // =========================
   // COMMAND BEHAVIOR
   // =========================
