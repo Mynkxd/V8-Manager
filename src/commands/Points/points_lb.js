@@ -13,12 +13,12 @@ export default {
         await interaction.deferReply();
 
         if (!fs.existsSync(DATA_FILE)) {
-            return interaction.editReply("📊 Abhi tak kisi member ke points add nahi hue hain.");
+            return interaction.editReply("📊 No points have been added to any member yet.");
         }
 
         const data = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
         if (Object.keys(data).length === 0) {
-            return interaction.editReply("📊 Abhi tak kisi member ke points add nahi hue hain.");
+            return interaction.editReply("📊 No points have been added to any member yet.");
         }
 
         const sortedUsers = Object.entries(data).sort((a, b) => b[1].total_points - a[1].total_points);
