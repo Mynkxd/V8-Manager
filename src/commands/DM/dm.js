@@ -13,7 +13,7 @@ export default {
         
         const role = interaction.guild.roles.cache.find(r => r.name === '[+] TeamV8');
         if (!role) {
-            return interaction.editReply("❌ Error: Server par '[+] TeamV8' role nahi mila!");
+            return interaction.editReply("❌ Error: '[+] TeamV8' role was not found in this server!");
         }
 
         let sentCount = 0;
