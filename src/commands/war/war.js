@@ -1,6 +1,6 @@
-const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
+import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
 
-module.exports = {
+export default {
     data: new SlashCommandBuilder()
         .setName('war')
         .setDescription('Generate War Template in current channel')
@@ -11,7 +11,7 @@ module.exports = {
         .addStringOption(option => option.setName('enemy_team').setDescription('Enemy Team Name').setRequired(true))
         .addStringOption(option => option.setName('allies').setDescription('Allies Name').setRequired(false)),
 
-    async execute(interaction) {
+    async execute(interaction, config, client) {
         await interaction.deferReply();
         const server_ip = interaction.options.getString('server_ip');
         const timing = interaction.options.getString('timing');
@@ -31,5 +31,5 @@ module.exports = {
         );
 
         await interaction.editReply(warTemplate);
-    },
+    }
 };
