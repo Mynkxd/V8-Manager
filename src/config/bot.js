@@ -25,7 +25,7 @@ export const botConfig = {
       {
         name: "Custom Status", // required by Discord API, not shown in the client
         state: "Team V8 Best in AS ",     // this is what people actually see
-        type: 3,               // Watching
+        type: 1,               // Watching
       },
     ],
   },
