@@ -123,7 +123,7 @@ export default {
         // --- A. DROPDOWN SELECTION INTERACTION HANDLER ---
         if (interaction.isStringSelectMenu() && interaction.customId === 'ticket_select_path') {
             try {
-                // INSTANT DEFER: Fixes "V8 is not responding" timeout issue
+                // Instant defer to defeat Discord 3-second timeout
                 if (!interaction.deferred && !interaction.replied) {
                     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
                 }
@@ -179,93 +179,4 @@ export default {
                 });
 
                 const welcomeEmbed = new EmbedBuilder()
-                    .setTitle(`🎫 Ticket Created — ${user.username}`)
-                    .setDescription(`Welcome ${user}!\nDesignated staff team will assist you shortly.`)
-                    .setColor('#5865F2')
-                    .setTimestamp();
-
-                const rolePing = (roleId && roleId !== 'norole') ? `<@&${roleId}>` : '';
-                await ticketChannel.send({ content: `${user}${rolePing}`, embeds: [welcomeEmbed] });
-
-                return await interaction.editReply({ content: `✅ Ticket channel created successfully: ${ticketChannel}` });
-            } catch (err) {
-                console.error("Ticket Creation Error:", err);
-                if (interaction.deferred || interaction.replied) {
-                    return await interaction.editReply({ content: `❌ Failed to create ticket. Make sure Bot Role is above assigned Staff Roles & has 'Manage Channels' permission!` });
-                }
-            }
-        }
-
-        // --- B. SLASH COMMAND EXECUTION ROUTER ---
-        const deferred = await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
-        if (!deferred) return;
-
-        if (!interaction.member.permissions.has(PermissionFlagsBits.ManageChannels)) {
-            return await replyUserError(interaction, { type: ErrorTypes.PERMISSION, message: 'You need `Manage Channels` permission.' });
-        }
-
-        const subcommand = interaction.options.getSubcommand();
-
-        if (subcommand === "dashboard") {
-            return ticketConfig.execute(interaction, config, client);
-        }
-
-        // 1. EXECUTE /TICKET CONFIG
-        if (subcommand === "config") {
-            const guildConfig = (await getGuildConfig(client, interaction.guildId)) || {};
-            if (!guildConfig.ticketPanelChannelId) {
-                return await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: "No active ticket system found. Use `/ticket setup` first." });
-            }
-
-            const configEmbed = createEmbed({
-                title: "⚙️ **TICKET SYSTEM CONFIGURATION**",
-                description: 
-                    `📍 **Panel Channel:** <#${guildConfig.ticketPanelChannelId}>\n` +
-                    `📂 **Ticket Category:** ${guildConfig.ticketCategoryId ? `<#${guildConfig.ticketCategoryId}>` : "Default"}\n` +
-                    `📩 **Message ID:** \`${guildConfig.ticketPanelMessageId || "N/A"}\``,
-                color: getColor('info')
-            });
-
-            return await InteractionHelper.safeEditReply(interaction, { embeds: [configEmbed] });
-        }
-
-        // 2. EXECUTE /TICKET EDIT
-        if (subcommand === "edit") {
-            const guildConfig = (await getGuildConfig(client, interaction.guildId)) || {};
-            if (!guildConfig.ticketPanelChannelId || !guildConfig.ticketPanelMessageId) {
-                return await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: "No ticket panel found to edit." });
-            }
-
-            const newTitle = interaction.options.getString("panel_title");
-            const newMessage = interaction.options.getString("panel_message");
-
-            try {
-                const channel = await interaction.guild.channels.fetch(guildConfig.ticketPanelChannelId);
-                const targetMsg = await channel.messages.fetch(guildConfig.ticketPanelMessageId);
-
-                const updatedEmbed = EmbedBuilder.from(targetMsg.embeds[0])
-                    .setTitle(newTitle)
-                    .setDescription(newMessage);
-
-                await targetMsg.edit({ embeds: [updatedEmbed] });
-
-                return await InteractionHelper.safeEditReply(interaction, {
-                    embeds: [successEmbed("Panel Updated", "✅ The ticket panel text has been updated successfully!")]
-                });
-            } catch (error) {
-                return await replyUserError(interaction, { type: ErrorTypes.UNKNOWN, message: "Could not fetch or edit the existing panel message." });
-            }
-        }
-
-        // 3. EXECUTE /TICKET SETUP
-        if (subcommand === "setup") {
-            const panelChannel = interaction.options.getChannel("panel_channel");
-            const panelTitle = interaction.options.getString("panel_title");
-            const panelMessage = interaction.options.getString("panel_message");
-            const ticketCategory = interaction.options.getChannel("ticket_category");
-
-            const menuOptions = [];
-
-            for (let i = 1; i <= 3; i++) {
-                const label = interaction.options.getString(`opt${i}_label`);
-                const desc = interaction.options.getString(`opt${i}_desc`);
+                    .setTitle(`🎫 Ticket Created — ${
