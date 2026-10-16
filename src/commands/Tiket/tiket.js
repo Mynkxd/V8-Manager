@@ -43,7 +43,7 @@ export default {
                 )
                 // Category 1
                 .addStringOption((option) =>
-                    option.setName("opt1_label").setDescription("Category 1 Title (e.g. TvT Support)").setRequired(true)
+                    option.setName("opt1_label").setDescription("Category 1 Title (e.g. General Support)").setRequired(true)
                 )
                 .addStringOption((option) =>
                     option.setName("opt1_desc").setDescription("Category 1 Description").setRequired(true)
@@ -56,7 +56,7 @@ export default {
                 )
                 // Category 2
                 .addStringOption((option) =>
-                    option.setName("opt2_label").setDescription("Category 2 Title (e.g. General Support)").setRequired(false)
+                    option.setName("opt2_label").setDescription("Category 2 Title (e.g. TvT Support)").setRequired(false)
                 )
                 .addStringOption((option) =>
                     option.setName("opt2_desc").setDescription("Category 2 Description").setRequired(false)
@@ -122,40 +122,55 @@ export default {
     async execute(interaction, config, client) {
         // --- A. DROPDOWN SELECTION INTERACTION HANDLER ---
         if (interaction.isStringSelectMenu() && interaction.customId === 'ticket_select_path') {
-            await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-
-            const selectedValue = interaction.values[0]; 
-            const valueParts = selectedValue.split('_');
-            const roleId = valueParts[2]; 
-
-            const guild = interaction.guild;
-            const user = interaction.user;
-            const guildConfig = (await getGuildConfig(client, guild.id)) || {};
-
-            const existingChannel = guild.channels.cache.find(c => c.name === `ticket-${user.username.toLowerCase()}`);
-            if (existingChannel) {
-                return await interaction.editReply({ content: `❌ You already have an active ticket open: ${existingChannel}` });
-            }
-
-            const permissionOverwrites = [
-                {
-                    id: guild.id,
-                    deny: [PermissionFlagsBits.ViewChannel],
-                },
-                {
-                    id: user.id,
-                    allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory, PermissionFlagsBits.AttachFiles],
-                }
-            ];
-
-            if (roleId && roleId !== 'norole') {
-                permissionOverwrites.push({
-                    id: roleId,
-                    allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory, PermissionFlagsBits.ManageMessages],
-                });
-            }
-
             try {
+                // INSTANT DEFER: Fixes "V8 is not responding" timeout issue
+                if (!interaction.deferred && !interaction.replied) {
+                    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+                }
+
+                const selectedValue = interaction.values[0]; 
+                const valueParts = selectedValue.split('_');
+                const roleId = valueParts[2]; 
+
+                const guild = interaction.guild;
+                const user = interaction.user;
+                const guildConfig = (await getGuildConfig(client, guild.id)) || {};
+
+                // Check for duplicate active ticket
+                const existingChannel = guild.channels.cache.find(c => c.name === `ticket-${user.username.toLowerCase()}`);
+                if (existingChannel) {
+                    return await interaction.editReply({ content: `❌ You already have an active ticket open: ${existingChannel}` });
+                }
+
+                const permissionOverwrites = [
+                    {
+                        id: guild.id,
+                        deny: [PermissionFlagsBits.ViewChannel],
+                    },
+                    {
+                        id: user.id,
+                        allow: [
+                            PermissionFlagsBits.ViewChannel, 
+                            PermissionFlagsBits.SendMessages, 
+                            PermissionFlagsBits.ReadMessageHistory, 
+                            PermissionFlagsBits.AttachFiles
+                        ],
+                    }
+                ];
+
+                if (roleId && roleId !== 'norole') {
+                    permissionOverwrites.push({
+                        id: roleId,
+                        allow: [
+                            PermissionFlagsBits.ViewChannel, 
+                            PermissionFlagsBits.SendMessages, 
+                            PermissionFlagsBits.ReadMessageHistory, 
+                            PermissionFlagsBits.ManageMessages
+                        ],
+                    });
+                }
+
+                // Create Ticket Text Channel
                 const ticketChannel = await guild.channels.create({
                     name: `ticket-${user.username.toLowerCase()}`,
                     type: ChannelType.GuildText,
@@ -165,7 +180,7 @@ export default {
 
                 const welcomeEmbed = new EmbedBuilder()
                     .setTitle(`🎫 Ticket Created — ${user.username}`)
-                    .setDescription(`Welcome ${user}!\nDesignated staff will assist you shortly.`)
+                    .setDescription(`Welcome ${user}!\nDesignated staff team will assist you shortly.`)
                     .setColor('#5865F2')
                     .setTimestamp();
 
@@ -174,7 +189,10 @@ export default {
 
                 return await interaction.editReply({ content: `✅ Ticket channel created successfully: ${ticketChannel}` });
             } catch (err) {
-                return await interaction.editReply({ content: `❌ Failed to create ticket channel. Verify bot permissions.` });
+                console.error("Ticket Creation Error:", err);
+                if (interaction.deferred || interaction.replied) {
+                    return await interaction.editReply({ content: `❌ Failed to create ticket. Make sure Bot Role is above assigned Staff Roles & has 'Manage Channels' permission!` });
+                }
             }
         }
 
@@ -251,67 +269,3 @@ export default {
             for (let i = 1; i <= 3; i++) {
                 const label = interaction.options.getString(`opt${i}_label`);
                 const desc = interaction.options.getString(`opt${i}_desc`);
-                const role = interaction.options.getRole(`opt${i}_role`);
-                const emoji = interaction.options.getString(`opt${i}_emoji`);
-
-                if (label && desc) {
-                    const roleIdTag = role ? role.id : 'norole';
-                    const optionObject = {
-                        label: label,
-                        description: desc,
-                        value: `cat_${i}_${roleIdTag}`
-                    };
-
-                    if (emoji) {
-                        optionObject.emoji = emoji.trim();
-                    }
-
-                    menuOptions.push(optionObject);
-                }
-            }
-
-            if (menuOptions.length === 0) {
-                return await replyUserError(interaction, { 
-                    type: ErrorTypes.UNKNOWN, 
-                    message: 'Please fill at least 1 Category Option with Label, Description, and Staff Role!' 
-                });
-            }
-
-            const setupEmbed = createEmbed({ 
-                title: panelTitle, 
-                description: panelMessage,
-                color: getColor('info')
-            });
-
-            const selectMenu = new StringSelectMenuBuilder()
-                .setCustomId("ticket_select_path")
-                .setPlaceholder("👉 Select a ticket category...")
-                .addOptions(menuOptions);
-
-            const ticketRow = new ActionRowBuilder().addComponents(selectMenu);
-
-            try {
-                const sentPanel = await panelChannel.send({
-                    embeds: [setupEmbed],
-                    components: [ticketRow],
-                });
-
-                if (client.db && interaction.guildId) {
-                    const currentConfig = (await getGuildConfig(client, interaction.guildId)) || {};
-                    currentConfig.ticketCategoryId = ticketCategory ? ticketCategory.id : null;
-                    currentConfig.ticketPanelChannelId = panelChannel.id;
-                    currentConfig.ticketPanelMessageId = sentPanel?.id || null;
-
-                    await setGuildConfig(client, interaction.guildId, currentConfig);
-                }
-
-                await InteractionHelper.safeEditReply(interaction, {
-                    embeds: [successEmbed("Ticket System Deployed", `✅ Ticket panel sent to ${panelChannel}!\n\nAll options are mapped to designated roles.`)]
-                });
-
-            } catch (error) {
-                await handleInteractionError(interaction, error, { commandName: 'ticket_setup', source: 'ticket_setup_command' });
-            }
-        }
-    }
-};
